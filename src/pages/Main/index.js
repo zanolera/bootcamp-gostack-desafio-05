@@ -12,6 +12,7 @@ export default class Main extends Component {
         newRepo: '',
         repositories: [],
         loading: false,
+        notFound: false,
     };
 
     componentDidMount() {
@@ -31,31 +32,42 @@ export default class Main extends Component {
     }
 
     handleInputChange = e => {
-        this.setState({ newRepo: e.target.value });
+        this.setState({ newRepo: e.target.value, notFound: false });
     };
 
     handleSubmit = async e => {
         e.preventDefault();
 
-        this.setState({ loading: true });
+        this.setState({ loading: true, notFound: false });
 
         const { newRepo, repositories } = this.state;
 
-        const response = await api.get(`/repos/${newRepo}`);
+        try {
+            const response = await api.get(`/repos/${newRepo}`);
 
-        const data = {
-            name: response.data.full_name,
-        };
+            const data = {
+                name: response.data.full_name,
+            };
 
-        this.setState({
-            repositories: [...repositories, data],
-            newRepo: '',
-            loading: false,
-        });
+            if (repositories.indexOf(data.name) > 0) {
+                throw new Error('Repositório duplicado');
+            }
+
+            this.setState({
+                repositories: [...repositories, data],
+                newRepo: '',
+                loading: false,
+                notFound: false,
+            });
+        } catch {
+            this.setState({ notFound: true });
+        } finally {
+            this.setState({ loading: false });
+        }
     };
 
     render() {
-        const { newRepo, loading, repositories } = this.state;
+        const { newRepo, loading, repositories, notFound } = this.state;
 
         return (
             <Container>
@@ -64,7 +76,7 @@ export default class Main extends Component {
                     Repositórios
                 </h1>
 
-                <Form onSubmit={this.handleSubmit}>
+                <Form onSubmit={this.handleSubmit} notFound={notFound}>
                     <input
                         type="text"
                         placeholder="Adicionar repositório"
